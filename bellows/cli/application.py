@@ -128,6 +128,28 @@ def zdo(ctx, node, database):
 @zdo.command()
 @click.pass_context
 @util.app
+@click.argument('nwkaddr', type=util.BasedIntParamType())
+def add_device(ctx, nwkaddr):
+    """Add device to database"""
+    app = ctx.obj['app']
+    node = ctx.obj['node']
+
+    app.handle_join(nwkaddr, node, None)
+    yield from asyncio.sleep(10)
+
+    dev = util.get_device(app, node)
+    if dev is None:
+        return
+
+    v = yield from dev.zdo.request(0x0005, dev.nwk)
+    if v[0] != t.EmberStatus.SUCCESS:
+        click.echo("Non-success response: %s" % (v, ))
+    else:
+        click.echo(v[2])
+
+@zdo.command()
+@click.pass_context
+@util.app
 def endpoints(ctx):
     """List endpoints on a device"""
     app = ctx.obj['app']
