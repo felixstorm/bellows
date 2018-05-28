@@ -43,6 +43,7 @@ database_file = click.option(
         writable=True,
     ),
     required=True,
+    envvar='BELLOWS_APP_DB',
     default=os.path.join(click.get_app_dir("bellows"), "app.db"),
 )
 
