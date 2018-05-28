@@ -60,9 +60,9 @@ class ControllerApplication(zigpy.application.ControllerApplication):
 
         v = yield from e.getNetworkParameters()
         assert v[0] == t.EmberStatus.SUCCESS  # TODO: Better check
-        if v[1] != t.EmberNodeType.COORDINATOR:
+        if v[1] != t.EmberNodeType.COORDINATOR and v[1] != t.EmberNodeType.ROUTER:
             if not auto_form:
-                raise Exception("Network not configured as coordinator")
+                raise Exception("Network not configured as coordinator or as router")
 
             LOGGER.info("Forming network")
             yield from self._ezsp.leaveNetwork()
