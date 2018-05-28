@@ -20,14 +20,14 @@ from .main import main
 @opts.extended_pan
 @opts.pan
 @click.pass_context
-def form(ctx, database, channel, pan_id, extended_pan_id):
+async def form(ctx, database, channel, pan_id, extended_pan_id):
     """Form a new ZigBee network"""
     ctx.obj['database_file'] = database
 
-    def inner(ctx):
+    async def inner(ctx):
         app = ctx.obj['app']
-        yield from app.initialize()
-        yield from app.form_network(channel, pan_id, extended_pan_id)
+        await app.initialize()
+        await app.form_network(channel, pan_id, extended_pan_id)
 
     return util.app(inner, app_startup=False)(ctx)
 
@@ -36,16 +36,16 @@ def form(ctx, database, channel, pan_id, extended_pan_id):
 @opts.database_file
 @opts.duration_s
 @click.pass_context
-def permit(ctx, database, duration_s):
+async def permit(ctx, database, duration_s):
     """Allow devices to join this ZigBee network"""
     ctx.obj['database_file'] = database
 
-    def inner(ctx):
+    async def inner(ctx):
         app = ctx.obj['app']
-        yield from app.permit(duration_s)
+        await app.permit(duration_s)
 
         click.echo("Joins are permitted for the next %ss..." % (duration_s, ))
-        yield from asyncio.sleep(duration_s + 1)
+        await asyncio.sleep(duration_s + 1)
         click.echo("Done")
 
     return util.app(inner)(ctx)
@@ -57,18 +57,18 @@ def permit(ctx, database, duration_s):
 @opts.database_file
 @opts.duration_s
 @click.pass_context
-def permit_with_key(ctx, database, duration_s, node, code):
+async def permit_with_key(ctx, database, duration_s, node, code):
     """Allow devices to join this ZigBee network using an install code"""
     ctx.obj['database_file'] = database
     code = binascii.unhexlify(code)
 
-    def inner(ctx):
+    async def inner(ctx):
         app = ctx.obj['app']
         try:
-            yield from app.permit_with_key(node, code, duration_s)
+            await app.permit_with_key(node, code, duration_s)
 
             click.echo("Joins are permitted for the next %ss..." % (duration_s, ))
-            yield from asyncio.sleep(duration_s + 1)
+            await asyncio.sleep(duration_s + 1)
             click.echo("Done")
         except Exception as e:
             click.echo(e)
@@ -129,19 +129,19 @@ def zdo(ctx, node, database):
 @click.pass_context
 @util.app
 @click.argument('nwkaddr', type=util.BasedIntParamType())
-def add_device(ctx, nwkaddr):
+async def add_device(ctx, nwkaddr):
     """Add device to database"""
     app = ctx.obj['app']
     node = ctx.obj['node']
 
     app.handle_join(nwkaddr, node, None)
-    yield from asyncio.sleep(10)
+    await asyncio.sleep(10)
 
     dev = util.get_device(app, node)
     if dev is None:
         return
 
-    v = yield from dev.zdo.request(0x0005, dev.nwk)
+    v = await dev.zdo.request(0x0005, dev.nwk)
     if v[0] != t.EmberStatus.SUCCESS:
         click.echo("Non-success response: %s" % (v, ))
     else:
@@ -150,7 +150,7 @@ def add_device(ctx, nwkaddr):
 @zdo.command()
 @click.pass_context
 @util.app
-def endpoints(ctx):
+async def endpoints(ctx):
     """List endpoints on a device"""
     app = ctx.obj['app']
     node = ctx.obj['node']
@@ -159,7 +159,7 @@ def endpoints(ctx):
     if dev is None:
         return
 
-    v = yield from dev.zdo.request(0x0005, dev.nwk)
+    v = await dev.zdo.request(0x0005, dev.nwk)
     if v[0] != t.EmberStatus.SUCCESS:
         click.echo("Non-success response: %s" % (v, ))
     else:
@@ -170,7 +170,7 @@ def endpoints(ctx):
 @click.pass_context
 @util.app
 @click.argument('endpoint', type=click.IntRange(1, 255))
-def get_endpoint(ctx, endpoint):
+async def get_endpoint(ctx, endpoint):
     """Show an endpoint's simple descriptor"""
     app = ctx.obj['app']
     node = ctx.obj['node']
@@ -179,7 +179,7 @@ def get_endpoint(ctx, endpoint):
     if endp is None:
         return
 
-    v = yield from dev.zdo.request(0x0004, dev.nwk, endpoint)
+    v = await dev.zdo.request(0x0004, dev.nwk, endpoint)
     if v[0] != t.EmberStatus.SUCCESS:
         click.echo("Non-success response: %s" % (v, ))
     else:
@@ -191,7 +191,7 @@ def get_endpoint(ctx, endpoint):
 @click.argument('endpoint', type=click.IntRange(1, 255))
 @click.argument('cluster', type=click.IntRange(0, 65535))
 @util.app
-def bind(ctx, endpoint, cluster):
+async def bind(ctx, endpoint, cluster):
     """Bind to a cluster on a node"""
     app = ctx.obj['app']
     node = ctx.obj['node']
@@ -200,7 +200,7 @@ def bind(ctx, endpoint, cluster):
     if clust is None:
         return
 
-    v = yield from dev.zdo.bind(endpoint, cluster)
+    v = await dev.zdo.bind(endpoint, cluster)
     click.echo(v)
 
 
@@ -209,7 +209,7 @@ def bind(ctx, endpoint, cluster):
 @click.argument('endpoint', type=click.IntRange(1, 255))
 @click.argument('cluster', type=click.IntRange(0, 65535))
 @util.app
-def unbind(ctx, endpoint, cluster):
+async def unbind(ctx, endpoint, cluster):
     """Unbind a cluster on a node"""
     app = ctx.obj['app']
     node = ctx.obj['node']
@@ -218,18 +218,18 @@ def unbind(ctx, endpoint, cluster):
     if clust is None:
         return
 
-    v = yield from dev.zdo.unbind(endpoint, cluster)
+    v = await dev.zdo.unbind(endpoint, cluster)
     click.echo(v)
 
 
 @zdo.command()
 @click.pass_context
 @util.app
-def leave(ctx):
+async def leave(ctx):
     """Tell a node to leave the network"""
     app = ctx.obj['app']
 
-    v = yield from app.remove(ctx.obj['node'])
+    v = await app.remove(ctx.obj['node'])
     click.echo(v)
 
 
@@ -252,7 +252,7 @@ def zcl(ctx, database, node, cluster, endpoint):
 @click.argument('attribute', type=click.IntRange(0, 65535))
 @opts.manufacturer
 @util.app
-def read_attribute(ctx, attribute, manufacturer):
+async def read_attribute(ctx, attribute, manufacturer):
     app = ctx.obj['app']
     node = ctx.obj['node']
     endpoint_id = ctx.obj['endpoint']
@@ -262,7 +262,7 @@ def read_attribute(ctx, attribute, manufacturer):
     if cluster is None:
         return
 
-    v = yield from cluster.read_attributes([attribute], allow_cache=False, manufacturer=manufacturer)
+    v = await cluster.read_attributes([attribute], allow_cache=False, manufacturer=manufacturer)
     if not v:
         click.echo("Received empty response")
     elif attribute not in v[0]:
@@ -279,7 +279,7 @@ def read_attribute(ctx, attribute, manufacturer):
 @click.argument('value', type=click.IntRange(0, 65535))
 @opts.manufacturer
 @util.app
-def write_attribute(ctx, attribute, value, manufacturer):
+async def write_attribute(ctx, attribute, value, manufacturer):
     app = ctx.obj['app']
     node = ctx.obj['node']
     endpoint_id = ctx.obj['endpoint']
@@ -289,7 +289,7 @@ def write_attribute(ctx, attribute, value, manufacturer):
     if cluster is None:
         return
 
-    v = yield from cluster.write_attributes({attribute: value}, manufacturer=manufacturer)
+    v = await cluster.write_attributes({attribute: value}, manufacturer=manufacturer)
     click.echo(v)
 
 
@@ -318,7 +318,7 @@ def commands(ctx):
 @click.argument('parameters', nargs=-1)
 @opts.manufacturer
 @util.app
-def command(ctx, command, parameters, manufacturer):
+async def command(ctx, command, parameters, manufacturer):
     app = ctx.obj['app']
     node = ctx.obj['node']
     endpoint_id = ctx.obj['endpoint']
@@ -329,7 +329,7 @@ def command(ctx, command, parameters, manufacturer):
         return
 
     try:
-        v = yield from getattr(cluster, command)(*parameters, manufacturer=manufacturer)
+        v = await getattr(cluster, command)(*parameters, manufacturer=manufacturer)
         click.echo(v)
     except ValueError as e:
         click.echo(e)
@@ -342,7 +342,7 @@ def command(ctx, command, parameters, manufacturer):
 @click.argument('max_interval', type=click.IntRange(0, 65535))
 @click.argument('reportable_change', type=click.INT)
 @util.app
-def configure_reporting(ctx,
+async def configure_reporting(ctx,
                         attribute,
                         min_interval,
                         max_interval,
@@ -356,7 +356,7 @@ def configure_reporting(ctx,
     if cluster is None:
         return
 
-    v = yield from cluster.configure_reporting(
+    v = await cluster.configure_reporting(
         attribute,
         min_interval,
         max_interval,
