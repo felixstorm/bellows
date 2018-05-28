@@ -99,7 +99,7 @@ def join(ctx, channels, pan_id, extended_pan_id):
 
     fut = asyncio.Future()
     cbid = s.add_callback(functools.partial(cb, fut))
-    v = yield from s.joinNetwork(t.EmberNodeType.END_DEVICE, parameters)
+    v = yield from s.joinNetwork(t.EmberNodeType.ROUTER, parameters)
     util.check(v[0], "Joining network failed: %s" % (v[0], ))
     v = yield from fut
     click.echo(v)
