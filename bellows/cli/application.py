@@ -130,22 +130,14 @@ def zdo(ctx, node, database):
 @util.app
 @click.argument('nwkaddr', type=util.BasedIntParamType())
 async def add_device(ctx, nwkaddr):
-    """Add device to database"""
+    """Add device from network to database"""
     app = ctx.obj['app']
     node = ctx.obj['node']
 
-    app.handle_join(nwkaddr, node, None)
-    await asyncio.sleep(10)
-
-    dev = util.get_device(app, node)
-    if dev is None:
-        return
-
-    v = await dev.zdo.request(0x0005, dev.nwk)
-    if v[0] != t.EmberStatus.SUCCESS:
-        click.echo("Non-success response: %s" % (v, ))
-    else:
-        click.echo(v[2])
+    dev = app.add_update_device_from_network(nwkaddr, node)
+    await asyncio.sleep(1)
+    while dev.initializing:
+        await asyncio.sleep(1)
 
 @zdo.command()
 @click.pass_context
