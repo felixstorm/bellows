@@ -83,6 +83,20 @@ def test_partial_data_received(gw):
     assert gw._application.frame_received.call_count == 1
 
 
+def test_crc_error(gw):
+    gw.write = mock.MagicMock()
+    gw.data_received(b'L\xa1\x8e\x03\xcd\x07\xb9Y\xfbG%\xae\xbd~')
+    assert gw.write.call_count == 1
+    assert gw._application.frame_received.call_count == 0
+
+
+def test_crc_error_and_valid_frame(gw):
+    gw.write = mock.MagicMock()
+    gw.data_received(b'L\xa1\x8e\x03\xcd\x07\xb9Y\xfbG%\xae\xbd~\x54\x79\xa1\xb0\x50\xf2\x6e\x7e')
+    assert gw.write.call_count == 2
+    assert gw._application.frame_received.call_count == 1
+
+
 def test_data_frame_received(gw):
     gw.write = mock.MagicMock()
     gw.data_received(b'\x54\x79\xa1\xb0\x50\xf2\x6e\x7e')
@@ -104,24 +118,34 @@ def test_rst_frame_received(gw):
 
 def test_rstack_frame_received(gw):
     gw._reset_future = mock.MagicMock()
+    gw._reset_future.done = mock.MagicMock(return_value=False)
     gw.data_received(b'\xc1\x02\x0b\nR\x7e')
+    assert gw._reset_future.done.call_count == 1
     assert gw._reset_future.set_result.call_count == 1
 
 
 def test_wrong_rstack_frame_received(gw):
     gw._reset_future = mock.MagicMock()
-    gw.data_received(b'\xc1\x02\x01\nR\x7e')
+    gw.data_received(b'\xc1\x02\x01\xab\x18\x7e')
     assert gw._reset_future.set_result.call_count == 0
 
 
 def test_error_rstack_frame_received(gw):
     gw._reset_future = mock.MagicMock()
-    gw.data_received(b'\xc1\x02\x81\nR\x7e')
+    gw.data_received(b'\xc1\x02\x81\x3a\x90\x7e')
     assert gw._reset_future.set_result.call_count == 0
 
 
 def test_rstack_frame_received_nofut(gw):
     gw.data_received(b'\xc1\x02\x0b\nR\x7e')
+
+
+def test_rstack_frame_received_out_of_order(gw):
+    gw._reset_future = mock.MagicMock()
+    gw._reset_future.done = mock.MagicMock(return_value=True)
+    gw.data_received(b'\xc1\x02\x0b\nR\x7e')
+    assert gw._reset_future.done.call_count == 1
+    assert gw._reset_future.set_result.call_count == 0
 
 
 def test_error_frame_received(gw):
