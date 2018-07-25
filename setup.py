@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="bellows",
-    version="0.6.0.devfstorm0",
+    version="0.6.0.devfstorm1",
     description="Library implementing EZSP",
     url="http://github.com/zigpy/bellows",
     author="Russell Cloran",
@@ -23,7 +23,7 @@ setup(
     ],
     dependency_links=[
         'https://github.com/rcloran/pure-pcapy-3/archive/e289c7d7566306dc02d8f4eb30c0358b41f40f26.zip#egg=pure_pcapy3-1.0.1',
-        'git+https://github.com/felixstorm/zigpy.git#egg=zigpy-0.1.0.devfstorm0',
+        'https://github.com/felixstorm/zigpy/archive/master.zip#zigpy==0.1.0.devfstorm0',
     ],
     tests_require=[
         'pytest',
